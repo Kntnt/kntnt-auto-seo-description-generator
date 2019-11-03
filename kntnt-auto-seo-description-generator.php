@@ -13,53 +13,36 @@
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
  */
 
-namespace Kntnt\Auto_SEO_Description_Generator;
+defined( 'WPINC' ) || die;
 
-defined( 'WPINC' ) && new Plugin;
+add_filter( 'get_post_metadata', function ( $value, $post_id, $meta_key, $single ) {
 
-final class Plugin {
-
-    function __construct() {
-        add_filter( 'get_post_metadata', [ $this, 'get_post_metadata' ], 10, 4 );
+    // Do nothing if _genesis_description isn't requested.
+    if ( '' != $meta_key && '_genesis_description' != $meta_key ) {
+        return $value;
     }
 
-    function get_post_metadata( $value, $post_id, $meta_key, $single ) {
-
-        // Don't filter when this filter is called indirectly by itself.
-        static $dont_filter = false;
-        if ( $dont_filter ) {
-            return $value;
-        }
-
-        // Do nothing if _genesis_description isn't requested.
-        if ( '' != $meta_key && '_genesis_description' != $meta_key ) {
-            return $value;
-        }
-
-        // Get the original metadata.
-        $dont_filter = true;
-        $meta_value = get_post_meta( $post_id, $meta_key, $single );
-        $dont_filter = false;
-
-        if ( is_array( $meta_value ) ) {
-            if ( ! isset( $meta_value['_genesis_description'] ) ) {
-                $meta_value['_genesis_description'][0] = $this->description( $post_id );
-            }
-            $meta_value['_genesis_description'][0] = $this->description( $post_id, $meta_value['_genesis_description'][0] );
-        }
-        else {
-            $meta_value = $this->description( $post_id, $meta_value );
-        }
-
-        return $meta_value;
-
+    // Don't filter when this filter is called indirectly by itself.
+    static $dont_filter = false;
+    if ( $dont_filter ) {
+        return $value;
     }
 
-    private function description( $post_id, $text = '' ) {
-        if ( '' == $text ) {
-            $text = get_the_excerpt( $post_id );
+    // Get the original metadata.
+    $dont_filter = true;
+    $meta_value = get_post_meta( $post_id, $meta_key, $single );
+    $dont_filter = false;
+
+    // Use the excerpt if  _genesis_description is empty.
+    if ( is_array( $meta_value ) ) {
+        if ( ! isset( $meta_value['_genesis_description'] ) || '' == $meta_value['_genesis_description'][0] ) {
+            $meta_value['_genesis_description'][0] = get_the_excerpt( $post_id );
         }
-        return $text;
+    }
+    else if ( '' == $meta_value ) {
+        $meta_value = get_the_excerpt( $post_id );
     }
 
-}
+    return $meta_value;
+
+}, 10, 4 );
